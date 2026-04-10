@@ -1,0 +1,16 @@
+{
+  "name": "estimation-tool",
+  "version": "1.0.0",
+  "description": "A simple construction estimating web app for a contractor",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  }
+}
