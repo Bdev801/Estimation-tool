@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Devco Estimator</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --bg:#0F0F0F;--surface:#161616;--border:#222;--border2:#2A2A2A;
+    --text:#E8E0D5;--muted:#888;--dim:#555;--orange:#F97316;
+    --font-display:'Barlow Condensed',sans-serif;
+    --font-body:'Barlow',sans-serif;
+  }
+  html,body{background:var(--bg);color:var(--text);font-family:var(--font-display);min-height:100vh;overflow-x:hidden;}
+  ::-webkit-scrollbar{width:4px;}
+  ::-webkit-scrollbar-track{background:var(--bg);}
+  ::-webkit-scrollbar-thumb{background:#333;border-radius:2px;}
+  input,textarea,select{background:var(--surface);border:1px solid var(--border2);border-radius:4px;padding:12px 14px;color:var(--text);font-size:15px;font-family:var(--font-display);outline:none;width:100%;transition:border-color .2s;}
+  input:focus,textarea:focus,select:focus{border-color:var(--orange);}
+  select option{background:var(--surface);}
+  textarea{font-family:var(--font-body);resize:vertical;line-height:1.6;}
+  button{cursor:pointer;font-family:var(--font-display);}
+  @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+  /* NAV */
+  #nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(15,15,15,.95);border-bottom:1px solid #1a1a1a;display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:56px;backdrop-filter:blur(10px);}
+  #logo{font-size:20px;font-weight:900;letter-spacing:3px;text-transform:uppercase;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;}
+  #logo .hex{color:var(--orange);font-size:22px;}
+  #logo .accent{color:var(--orange);}
+  #logo .sub{font-size:10px;color:#444;letter-spacing:2px;font-weight:400;}
+  #nav-links{display:flex;gap:2px;}
+  .nav-btn{padding:6px 10px;border-radius:4px;background:transparent;color:#666;border:none;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;transition:all .2s;white-space:nowrap;}
+  .nav-btn.active{background:var(--orange);color:#0F0F0F;}
+
+  /* MAIN */
+  #main{padding-top:56px;min-height:100vh;}
+  .screen{display:none;animation:fadeUp .3s ease;}
+  .screen.active{display:block;}
+
+  /* HOME */
+  .hero{padding:40px 20px 24px;}
+  .hero-tag{display:inline-block;font-size:10px;letter-spacing:4px;color:var(--orange);text-transform:uppercase;margin-bottom:14px;padding:4px 10px;border:1px solid var(--orange);border-radius:2px;}
+  .hero-title{font-size:clamp(36px,9vw,72px);font-weight:900;line-height:1;letter-spacing:-1px;margin:0 0 16px;text-transform:uppercase;}
+  .hero-sub{font-size:16px;color:var(--muted);line-height:1.6;margin-bottom:28px;font-family:var(--font-body);font-weight:400;}
+  .stat-row{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:28px;}
+  .stat{background:var(--surface);border:1px solid var(--border);padding:16px;}
+  .stat-num{font-size:28px;font-weight:900;color:var(--orange);display:block;}
+  .stat-label{font-size:10px;color:#555;letter-spacing:2px;text-transform:uppercase;}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .btn-primary{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;background:var(--orange);color:#0F0F0F;border:none;border-radius:4px;font-size:14px;font-weight:800;letter-spacing:2px;text-transform:uppercase;transition:opacity .15s;}
+  .btn-primary:hover{opacity:.9;}
+  .btn-ghost{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;background:transparent;color:var(--text);border:1px solid #333;border-radius:4px;font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;}
+
+  .section-label{font-size:10px;letter-spacing:3px;color:var(--orange);text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #1a1a1a;}
+  .recent-label{font-size:10px;letter-spacing:3px;color:#444;text-transform:uppercase;padding:0 20px 12px;}
+  .project-grid{display:grid;grid-template-columns:1fr;gap:2px;padding:0 20px 60px;}
+  @media(min-width:600px){.project-grid{grid-template-columns:1fr 1fr;}}
+  .project-card{background:var(--surface);border:1px solid var(--border);padding:20px;border-radius:4px;cursor:pointer;transition:border-color .2s;}
+  .project-card:hover,.project-card:active{border-color:var(--orange);}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+  .card-title{font-size:16px;font-weight:700;letter-spacing:.5px;flex:1;padding-right:8px;}
+  .card-client{font-size:12px;color:var(--muted);margin-bottom:8px;}
+  .card-amt{font-size:26px;font-weight:900;color:var(--orange);}
+  .card-type{font-size:11px;color:#444;margin-top:4px;}
+  .badge{font-size:9px;letter-spacing:2px;padding:3px 7px;border-radius:2px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;}
+  .badge-draft{background:#2A2A2A;color:#777;border:1px solid #333;}
+  .badge-sent{background:#1a3a1a;color:#4ade80;border:1px solid #4ade80;}
+  .badge-approved{background:#3a1a00;color:var(--orange);border:1px solid var(--orange);}
+
+  /* FORM */
+  .form-wrap{max-width:700px;margin:0 auto;padding:32px 20px 80px;}
+  .form-title{font-size:32px;font-weight:900;letter-spacing:2px;margin-bottom:6px;text-transform:uppercase;}
+  .form-sub{color:#555;margin-bottom:32px;font-size:14px;font-family:var(--font-body);}
+  .form-section{margin-bottom:28px;}
+  .field{margin-bottom:12px;}
+  .field-label{font-size:10px;color:#555;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;display:block;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media(max-width:480px){.field-row{grid-template-columns:1fr;}}
+
+  /* ESTIMATE */
+  .est-wrap{max-width:900px;margin:0 auto;padding:32px 20px 80px;}
+  .est-header{margin-bottom:24px;}
+  .est-tag{font-size:10px;color:var(--orange);letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;}
+  .est-title{font-size:clamp(22px,5vw,36px);font-weight:900;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
+  .est-client{font-size:14px;color:var(--muted);margin-bottom:20px;}
+  .price-block{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--orange);padding:20px;border-radius:4px;margin-bottom:20px;}
+  .price-label{font-size:10px;color:#555;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
+  .price-range{font-size:clamp(28px,6vw,44px);font-weight:900;color:var(--orange);line-height:1;}
+  .price-duration{font-size:13px;color:#555;margin-top:6px;}
+  .price-permit{font-size:12px;color:var(--orange);margin-top:4px;}
+  .action-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;}
+  .action-btn{padding:11px 20px;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border-radius:4px;}
+
+  /* TABS */
+  .tabs{display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid #1a1a1a;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab-btn{padding:10px 14px;background:none;border:none;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#444;border-bottom:2px solid transparent;white-space:nowrap;transition:color .2s;}
+  .tab-btn.active{color:var(--orange);border-bottom-color:var(--orange);}
+
+  .tab-content{display:none;}
+  .tab-content.active{display:block;animation:fadeUp .25s ease;}
+  .card{background:var(--surface);border:1px solid #1a1a1a;border-radius:4px;padding:20px;margin-bottom:10px;}
+  .card-h{font-size:13px;font-weight:700;letter-spacing:1.5px;margin-bottom:16px;text-transform:uppercase;color:var(--text);}
+  .summary-text{color:#AAA;line-height:1.7;font-family:var(--font-body);font-size:14px;}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media(max-width:500px){.two-col{grid-template-columns:1fr;}}
+  .list-item{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid #1A1A1A;font-size:13px;font-family:var(--font-body);color:#AAA;align-items:flex-start;}
+  .list-item:last-child{border-bottom:none;}
+  .list-dot{color:var(--orange);flex-shrink:0;margin-top:1px;}
+
+  /* TABLE */
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table{width:100%;border-collapse:collapse;min-width:500px;}
+  th{text-align:left;padding:9px 10px;font-size:9px;letter-spacing:2px;color:#444;text-transform:uppercase;border-bottom:1px solid #1a1a1a;white-space:nowrap;}
+  td{padding:11px 10px;font-size:13px;border-bottom:1px solid #111;font-family:var(--font-body);}
+  td.right,th.right{text-align:right;}
+  td.orange{color:var(--orange);font-weight:700;font-size:11px;letter-spacing:.5px;}
+  td.bold{font-weight:700;}
+  tr.total-row td{padding-top:16px;font-size:15px;font-weight:900;}
+  tr.total-row td.right{color:var(--orange);}
+  tr:nth-child(even) td{background:rgba(255,255,255,.01);}
+
+  /* SETTINGS */
+  .sett-wrap{max-width:520px;margin:0 auto;padding:32px 20px 80px;}
+  .markup-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;}
+  .markup-btn{padding:12px 8px;border-radius:4px;border:1px solid var(--border2);background:var(--surface);color:#777;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;text-align:center;line-height:1.4;}
+  .markup-btn.active{background:var(--orange);color:#0F0F0F;border-color:var(--orange);}
+
+  /* LOADING */
+  #loading-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:200;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px;}
+  #loading-screen.visible{display:flex;}
+  .spinner{width:48px;height:48px;border:3px solid #222;border-top-color:var(--orange);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:24px;}
+  .loading-title{font-size:20px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+  .loading-sub{font-size:13px;color:#555;font-family:var(--font-body);}
+  .loading-dots{display:inline-flex;gap:4px;margin-top:20px;}
+  .loading-dot{width:6px;height:6px;border-radius:50%;background:var(--orange);animation:pulse 1.2s ease-in-out infinite;}
+  .loading-dot:nth-child(2){animation-delay:.2s;}
+  .loading-dot:nth-child(3){animation-delay:.4s;}
+
+  /* TOAST */
+  #toast{position:fixed;bottom:20px;right:16px;z-index:999;padding:12px 20px;border-radius:4px;font-size:12px;font-weight:700;letter-spacing:1px;display:none;animation:toastIn .3s ease;}
+  #toast.success{background:#1a3a1a;border:1px solid #4ade80;color:#4ade80;display:block;}
+  #toast.error{background:#3a1a00;border:1px solid var(--orange);color:var(--orange);display:block;}
+
+  /* EMPTY */
+  .empty{text-align:center;padding:60px 20px;color:#333;}
+  .empty-icon{font-size:40px;margin-bottom:12px;}
+  .empty-title{font-size:18px;font-weight:700;margin-bottom:6px;}
+  .empty-sub{font-size:13px;color:#444;font-family:var(--font-body);}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <div id="logo" onclick="showScreen('home')">
+    <span class="hex">⬡</span>
+    <span>DEV<span class="accent">CO</span></span>
+    <span class="sub">ESTIMATOR</span>
+  </div>
+  <div id="nav-links">
+    <button class="nav-btn active" data-screen="home" onclick="showScreen('home')">Dashboard</button>
+    <button class="nav-btn" data-screen="new" onclick="startNewEstimate()">New</button>
+    <button class="nav-btn" data-screen="projects" onclick="showScreen('projects')">Projects</button>
+    <button class="nav-btn" data-screen="settings" onclick="showScreen('settings')">Settings</button>
+  </div>
+</nav>
+
+<!-- LOADING OVERLAY -->
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <div class="loading-title">Generating Estimate</div>
+  <div class="loading-sub">AI is analyzing your project scope and calculating costs...</div>
+  <div class="loading-dots">
+    <div class="loading-dot"></div>
+    <div class="loading-dot"></div>
+    <div class="loading-dot"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<main id="main">
+
+<!-- ═══ HOME ═══ -->
+<div id="screen-home" class="screen active">
+  <div class="hero">
+    <div class="hero-tag">AI-Powered Estimating</div>
+    <h1 class="hero-title">Build Smarter.<br><span style="color:var(--orange)">Win More.</span></h1>
+    <p class="hero-sub">Professional construction estimates in seconds — built for <span id="company-hero">Devco Construction LLC</span>.</p>
+    <div class="stat-row">
+      <div class="stat"><span class="stat-num" id="stat-projects">0</span><span class="stat-label">Projects</span></div>
+      <div class="stat"><span class="stat-num" id="stat-markup">25%</span><span class="stat-label">Markup</span></div>
+      <div class="stat"><span class="stat-num" id="stat-pipeline">$0</span><span class="stat-label">Pipeline</span></div>
+      <div class="stat"><span class="stat-num" id="stat-approved">0</span><span class="stat-label">Approved</span></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="startNewEstimate()">+ New Estimate</button>
+      <button class="btn-ghost" onclick="showScreen('projects')">View Projects →</button>
+    </div>
+  </div>
+  <div id="recent-section" style="display:none;">
+    <div class="recent-label">Recent Projects</div>
+    <div class="project-grid" id="recent-grid"></div>
+  </div>
+</div>
+
+<!-- ═══ NEW ESTIMATE ═══ -->
+<div id="screen-new" class="screen">
+  <div class="form-wrap">
+    <div class="form-title">New Estimate</div>
+    <div class="form-sub">The more detail you provide, the sharper the estimate.</div>
+
+    <div class="form-section">
+      <div class="section-label">01 — Client Info</div>
+      <div class="field-row">
+        <div class="field"><label class="field-label">Client Name</label><input id="f-clientName" type="text" placeholder="John Smith"/></div>
+        <div class="field"><label class="field-label">Phone</label><input id="f-clientPhone" type="tel" placeholder="(555) 000-0000"/></div>
+      </div>
+      <div class="field"><label class="field-label">Email</label><input id="f-clientEmail" type="email" placeholder="client@email.com"/></div>
+      <div class="field"><label class="field-label">Project Address</label><input id="f-address" type="text" placeholder="123 Main St, City, State"/></div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-label">02 — Project Details</div>
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Project Type</label>
+          <select id="f-projectType">
+            <option>General Construction</option><option>Framing</option><option>Roofing</option>
+            <option>Concrete & Foundation</option><option>Plumbing</option><option>Electrical</option>
+            <option>HVAC</option><option>Drywall & Painting</option><option>Flooring</option>
+            <option>Tile & Stone</option><option>Cabinetry & Millwork</option><option>Windows & Doors</option>
+            <option>Insulation</option><option>Excavation & Grading</option><option>Landscaping</option>
+            <option>Demo & Hauling</option>
+          </select>
+        </div>
+        <div class="field"><label class="field-label">Square Footage</label><input id="f-sqft" type="text" placeholder="e.g. 1,500 sq ft"/></div>
+      </div>
+      <div class="field"><label class="field-label">Timeline / Target Start</label><input id="f-timeline" type="text" placeholder="e.g. Start June 1, complete by August"/></div>
+      <div class="field">
+        <label class="field-label">Project Description *</label>
+        <textarea id="f-description" rows="6" placeholder="Describe the full scope of work. Include materials preferences, special conditions, access issues, existing conditions, demo scope, etc."></textarea>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-label">03 — Internal Notes</div>
+      <div class="field">
+        <label class="field-label">Notes (not shown to client)</label>
+        <textarea id="f-notes" rows="3" placeholder="Subcontractors, special considerations, pricing history..."></textarea>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-primary" onclick="generateEstimate()">⚡ Generate Estimate</button>
+      <button class="btn-ghost" onclick="showScreen('home')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ESTIMATE VIEW ═══ -->
+<div id="screen-estimate" class="screen">
+  <div class="est-wrap">
+    <div class="est-header">
+      <div class="est-tag" id="est-tag"></div>
+      <div class="est-title" id="est-title"></div>
+      <div class="est-client" id="est-client"></div>
+    </div>
+    <div class="price-block">
+      <div class="price-label">Estimated Range</div>
+      <div class="price-range" id="est-range"></div>
+      <div class="price-duration" id="est-duration"></div>
+      <div class="price-permit" id="est-permit" style="display:none;"></div>
+    </div>
+    <div class="action-row">
+      <button class="btn-primary action-btn" onclick="markStatus('Sent')">Mark Sent</button>
+      <button class="btn-ghost action-btn" onclick="markStatus('Approved')">Mark Approved</button>
+      <button class="btn-ghost action-btn" onclick="startNewEstimate()">New Estimate</button>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('summary')">Summary</button>
+      <button class="tab-btn" onclick="showTab('lineitems')">Line Items</button>
+      <button class="tab-btn" onclick="showTab('materials')">Materials</button>
+      <button class="tab-btn" onclick="showTab('labor')">Labor</button>
+      <button class="tab-btn" onclick="showTab('scope')">Scope</button>
+    </div>
+
+    <div id="tab-summary" class="tab-content active">
+      <div class="card">
+        <div class="card-h">Project Overview</div>
+        <p class="summary-text" id="est-summary"></p>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-h">Assumptions</div>
+          <div id="est-assumptions"></div>
+        </div>
+        <div class="card">
+          <div class="card-h">Exclusions</div>
+          <div id="est-exclusions"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-lineitems" class="tab-content">
+      <div class="card">
+        <div class="card-h">Line Item Breakdown</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Category</th><th>Description</th><th>Unit</th><th class="right">Qty</th><th class="right">Unit Cost</th><th class="right">Total</th></tr></thead>
+            <tbody id="tbl-lineitems"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-materials" class="tab-content">
+      <div class="card">
+        <div class="card-h">Materials List</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Material</th><th>Quantity</th><th class="right">Est. Cost</th></tr></thead>
+            <tbody id="tbl-materials"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-labor" class="tab-content">
+      <div class="card">
+        <div class="card-h">Labor Breakdown</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Trade</th><th class="right">Hours</th><th class="right">Rate/hr</th><th class="right">Total</th></tr></thead>
+            <tbody id="tbl-labor"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-scope" class="tab-content">
+      <div class="card">
+        <div class="card-h">Scope of Work Notes</div>
+        <div id="est-scope"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PROJECTS ═══ -->
+<div id="screen-projects" class="screen">
+  <div style="padding:32px 20px 16px;">
+    <div class="form-title">All Projects</div>
+    <div style="color:#555;font-family:var(--font-body);font-size:14px;margin-bottom:24px;" id="projects-sub">0 total</div>
+  </div>
+  <div class="project-grid" id="all-projects-grid"></div>
+</div>
+
+<!-- ═══ SETTINGS ═══ -->
+<div id="screen-settings" class="screen">
+  <div class="sett-wrap">
+    <div class="form-title">Settings</div>
+    <div style="color:#555;font-family:var(--font-body);font-size:14px;margin-bottom:32px;">Company info, labor rates & markup.</div>
+
+    <div class="form-section">
+      <div class="section-label">API Key</div>
+      <div class="field">
+        <label class="field-label">Anthropic API Key</label>
+        <input id="s-apikey" type="password" placeholder="sk-ant-api03-..."/>
+        <div style="font-size:11px;color:#444;margin-top:6px;font-family:var(--font-body);">Get your key at console.anthropic.com — never share this file with anyone.</div>
+      </div>
+    </div>
+    <div class="form-section">
+      <div class="section-label">Company</div>
+      <div class="field"><label class="field-label">Company Name</label><input id="s-company" type="text" value="Devco Construction LLC"/></div>
+      <div class="field"><label class="field-label">ZIP Code (for localized pricing)</label><input id="s-zip" type="text" placeholder="e.g. 30301"/></div>
+    </div>
+    <div class="form-section">
+      <div class="section-label">Labor Rate</div>
+      <div class="field"><label class="field-label">Default Rate ($/hr)</label><input id="s-labor" type="number" value="85"/></div>
+    </div>
+    <div class="form-section">
+      <div class="section-label">Markup</div>
+      <div class="markup-row">
+        <button class="markup-btn" data-v="15" onclick="setMarkup(15)">Low<br>15%</button>
+        <button class="markup-btn active" data-v="25" onclick="setMarkup(25)">Standard<br>25%</button>
+        <button class="markup-btn" data-v="40" onclick="setMarkup(40)">Premium<br>40%</button>
+      </div>
+      <div class="field" style="margin-top:10px;"><label class="field-label">Custom %</label><input id="s-markup" type="number" value="25"/></div>
+    </div>
+    <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
+  </div>
+</div>
+
+</main>
+
+<script>
+// ── State ──
+let projects = JSON.parse(localStorage.getItem('devco_projects') || '[]');
+let settings = JSON.parse(localStorage.getItem('devco_settings') || '{"companyName":"Devco Construction LLC","markup":25,"laborRate":85,"zip":"","apiKey":""}');
+let currentProject = null;
+
+// ── Utils ──
+const fmt = n => n ? '$' + Number(n).toLocaleString('en-US', {maximumFractionDigits:0}) : '$0';
+const save = () => { localStorage.setItem('devco_projects', JSON.stringify(projects)); localStorage.setItem('devco_settings', JSON.stringify(settings)); };
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = type;
+  clearTimeout(t._to);
+  t._to = setTimeout(() => t.className = '', 3000);
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.screen === name || (name === 'estimate' && b.dataset.screen === 'new'));
+  });
+  if (name === 'home') renderHome();
+  if (name === 'projects') renderProjects();
+  window.scrollTo(0,0);
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ── Home ──
+function renderHome() {
+  document.getElementById('company-hero').textContent = settings.companyName;
+  document.getElementById('stat-projects').textContent = projects.length;
+  document.getElementById('stat-markup').textContent = settings.markup + '%';
+  const pipeline = projects.reduce((a,p) => a + ((p.estimate?.totalLow||0)+(p.estimate?.totalHigh||0))/2, 0);
+  document.getElementById('stat-pipeline').textContent = fmt(Math.round(pipeline));
+  document.getElementById('stat-approved').textContent = projects.filter(p=>p.status==='Approved').length;
+
+  const recent = projects.slice(0,6);
+  const rs = document.getElementById('recent-section');
+  rs.style.display = recent.length ? 'block' : 'none';
+  document.getElementById('recent-grid').innerHTML = recent.map(p => projectCardHTML(p)).join('');
+}
+
+function projectCardHTML(p) {
+  const avg = Math.round(((p.estimate?.totalLow||0)+(p.estimate?.totalHigh||0))/2);
+  const badgeCls = p.status === 'Sent' ? 'badge-sent' : p.status === 'Approved' ? 'badge-approved' : 'badge-draft';
+  return `<div class="project-card" onclick="openProject('${p.id}')">
+    <div class="card-top">
+      <div class="card-title">${p.estimate?.projectTitle || p.projectType}</div>
+      <div class="badge ${badgeCls}">${p.status}</div>
+    </div>
+    <div class="card-client">${p.clientName || 'No client'} · ${p.createdAt}</div>
+    <div class="card-amt">${fmt(avg)}</div>
+    <div class="card-type">${p.projectType}</div>
+  </div>`;
+}
+
+function renderProjects() {
+  const grid = document.getElementById('all-projects-grid');
+  document.getElementById('projects-sub').textContent = `${projects.length} total · ${projects.filter(p=>p.status==='Approved').length} approved`;
+  if (!projects.length) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📋</div><div class="empty-title">No projects yet</div><div class="empty-sub">Create your first estimate to get started</div></div>`;
+    return;
+  }
+  grid.innerHTML = projects.map(p => projectCardHTML(p)).join('');
+}
+
+function openProject(id) {
+  currentProject = projects.find(p => p.id == id);
+  renderEstimate(currentProject);
+  showScreen('estimate');
+}
+
+// ── New Estimate ──
+function startNewEstimate() {
+  ['clientName','clientEmail','clientPhone','address','sqft','timeline','description','notes'].forEach(f => {
+    document.getElementById('f-' + f).value = '';
+  });
+  document.getElementById('f-projectType').value = 'General Construction';
+  showScreen('new');
+}
+
+async function generateEstimate() {
+  const desc = document.getElementById('f-description').value.trim();
+  if (!desc) { showToast('Please describe the project.', 'error'); return; }
+
+  const form = {
+    clientName: document.getElementById('f-clientName').value,
+    clientEmail: document.getElementById('f-clientEmail').value,
+    clientPhone: document.getElementById('f-clientPhone').value,
+    address: document.getElementById('f-address').value,
+    projectType: document.getElementById('f-projectType').value,
+    sqft: document.getElementById('f-sqft').value,
+    timeline: document.getElementById('f-timeline').value,
+    description: desc,
+    notes: document.getElementById('f-notes').value,
+  };
+
+  if (!settings.apiKey) { showToast('Add your API key in Settings first.', 'error'); return; }
+
+  document.getElementById('loading-screen').classList.add('visible');
+
+  const system = `You are an expert construction estimator with 20+ years of experience working for ${settings.companyName}.
+Generate detailed, realistic construction estimates. Respond ONLY with valid JSON, no markdown, no extra text.
+JSON structure:
+{
+  "projectTitle": "string",
+  "summary": "string",
+  "totalLow": number,
+  "totalHigh": number,
+  "duration": "string",
+  "lineItems": [{"category":"string","description":"string","unit":"string","qty":number,"unitCost":number,"total":number}],
+  "materialsList": [{"item":"string","qty":"string","estimatedCost":number}],
+  "laborBreakdown": [{"trade":"string","hours":number,"rate":number,"total":number}],
+  "scopeNotes": ["string"],
+  "exclusions": ["string"],
+  "assumptions": ["string"],
+  "permitRequired": boolean,
+  "permitEstimate": number
+}`;
+
+  const user = `Generate a construction estimate:
+Client: ${form.clientName || 'TBD'}
+Project Type: ${form.projectType}
+Address: ${form.address || 'Not provided'}
+ZIP: ${settings.zip || 'Not provided'}
+Square Footage: ${form.sqft || 'Not provided'}
+Timeline: ${form.timeline || 'Flexible'}
+Labor Rate: $${settings.laborRate}/hr
+Markup: ${settings.markup}%
+Description: ${form.description}
+Notes: ${form.notes || 'None'}
+Apply the ${settings.markup}% markup to all costs. Use realistic current market pricing.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': settings.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system,
+        messages: [{ role: 'user', content: user }]
+      })
+    });
+    const data = await res.json();
+    const raw = data.content?.[0]?.text || '{}';
+    const estimate = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    const proj = { id: Date.now(), ...form, estimate, createdAt: new Date().toLocaleDateString(), status: 'Draft' };
+    projects.unshift(proj);
+    save();
+    currentProject = proj;
+    renderEstimate(proj);
+    document.getElementById('loading-screen').classList.remove('visible');
+    showScreen('estimate');
+  } catch(e) {
+    document.getElementById('loading-screen').classList.remove('visible');
+    showToast('Error generating estimate. Try again.', 'error');
+  }
+}
+
+// ── Render Estimate ──
+function renderEstimate(p) {
+  const e = p.estimate;
+  document.getElementById('est-tag').textContent = `${p.projectType} · ${p.createdAt}`;
+  document.getElementById('est-title').textContent = e.projectTitle || 'Estimate';
+  document.getElementById('est-client').textContent = [p.clientName, p.address].filter(Boolean).join(' · ') || 'Client TBD';
+  document.getElementById('est-range').textContent = `${fmt(e.totalLow)} – ${fmt(e.totalHigh)}`;
+  document.getElementById('est-duration').textContent = `Duration: ${e.duration || 'TBD'}`;
+  const permit = document.getElementById('est-permit');
+  if (e.permitRequired) { permit.textContent = `⚠ Permit required (~${fmt(e.permitEstimate)})`; permit.style.display='block'; }
+  else { permit.style.display='none'; }
+  document.getElementById('est-summary').textContent = e.summary || '';
+
+  // Assumptions
+  document.getElementById('est-assumptions').innerHTML = (e.assumptions||[]).map(a =>
+    `<div class="list-item"><span class="list-dot">▸</span>${a}</div>`).join('');
+  // Exclusions
+  document.getElementById('est-exclusions').innerHTML = (e.exclusions||[]).map(ex =>
+    `<div class="list-item"><span class="list-dot">✕</span>${ex}</div>`).join('');
+  // Line items
+  const avg = Math.round(((e.totalLow||0)+(e.totalHigh||0))/2);
+  document.getElementById('tbl-lineitems').innerHTML = (e.lineItems||[]).map((item,i) =>
+    `<tr><td class="orange">${item.category}</td><td>${item.description}</td><td>${item.unit}</td><td class="right">${item.qty}</td><td class="right">${fmt(item.unitCost)}</td><td class="right bold">${fmt(item.total)}</td></tr>`
+  ).join('') + `<tr class="total-row"><td colspan="5" class="right">TOTAL</td><td class="right">${fmt(avg)}</td></tr>`;
+  // Materials
+  document.getElementById('tbl-materials').innerHTML = (e.materialsList||[]).map(m =>
+    `<tr><td>${m.item}</td><td>${m.qty}</td><td class="right">${fmt(m.estimatedCost)}</td></tr>`).join('');
+  // Labor
+  document.getElementById('tbl-labor').innerHTML = (e.laborBreakdown||[]).map(l =>
+    `<tr><td class="bold">${l.trade}</td><td class="right">${l.hours} hrs</td><td class="right">${fmt(l.rate)}</td><td class="right bold">${fmt(l.total)}</td></tr>`).join('');
+  // Scope
+  document.getElementById('est-scope').innerHTML = (e.scopeNotes||[]).map(n =>
+    `<div class="list-item"><span class="list-dot">▸</span>${n}</div>`).join('');
+  // Reset tabs
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-summary').classList.add('active');
+  document.querySelector('.tab-btn').classList.add('active');
+}
+
+// ── Status ──
+function markStatus(status) {
+  if (!currentProject) return;
+  currentProject.status = status;
+  projects = projects.map(p => p.id === currentProject.id ? currentProject : p);
+  save();
+  showToast(status === 'Approved' ? '🎉 Project approved!' : 'Estimate marked as sent!');
+}
+
+// ── Settings ──
+function setMarkup(v) {
+  settings.markup = v;
+  document.getElementById('s-markup').value = v;
+  document.querySelectorAll('.markup-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.v) === v));
+}
+function saveSettings() {
+  settings.apiKey = document.getElementById('s-apikey').value;
+  settings.companyName = document.getElementById('s-company').value;
+  settings.zip = document.getElementById('s-zip').value;
+  settings.laborRate = Number(document.getElementById('s-labor').value);
+  settings.markup = Number(document.getElementById('s-markup').value);
+  save();
+  showToast('Settings saved!');
+}
+
+// ── Init ──
+document.getElementById('s-apikey').value = settings.apiKey || '';
+document.getElementById('s-company').value = settings.companyName;
+document.getElementById('s-zip').value = settings.zip;
+document.getElementById('s-labor').value = settings.laborRate;
+document.getElementById('s-markup').value = settings.markup;
+document.querySelectorAll('.markup-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.v) === settings.markup));
+renderHome();
+</script>
+</body>
+</html>
