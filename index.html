@@ -370,14 +370,6 @@
     <div style="color:#555;font-family:var(--font-body);font-size:14px;margin-bottom:32px;">Company info, labor rates & markup.</div>
 
     <div class="form-section">
-      <div class="section-label">API Key</div>
-      <div class="field">
-        <label class="field-label">Anthropic API Key</label>
-        <input id="s-apikey" type="password" placeholder="sk-ant-api03-..."/>
-        <div style="font-size:11px;color:#444;margin-top:6px;font-family:var(--font-body);">Get your key at console.anthropic.com — never share this file with anyone.</div>
-      </div>
-    </div>
-    <div class="form-section">
       <div class="section-label">Company</div>
       <div class="field"><label class="field-label">Company Name</label><input id="s-company" type="text" value="Devco Construction LLC"/></div>
       <div class="field"><label class="field-label">ZIP Code (for localized pricing)</label><input id="s-zip" type="text" placeholder="e.g. 30301"/></div>
@@ -404,7 +396,12 @@
 <script>
 // ── State ──
 let projects = JSON.parse(localStorage.getItem('devco_projects') || '[]');
-let settings = JSON.parse(localStorage.getItem('devco_settings') || '{"companyName":"Devco Construction LLC","markup":25,"laborRate":85,"zip":"","apiKey":""}');
+let settings = JSON.parse(localStorage.getItem('devco_settings') || '{"companyName":"Devco Construction LLC","markup":25,"laborRate":85,"zip":""}');
+if (settings.apiKey) {
+  delete settings.apiKey;
+  localStorage.setItem('devco_settings', JSON.stringify(settings));
+}
+const SECURE_ESTIMATE_ENDPOINT = 'https://ecvavrbqezspklokcxsu.supabase.co/functions/v1/estimate';
 let currentProject = null;
 
 // ── Utils ──
@@ -507,56 +504,27 @@ async function generateEstimate() {
     notes: document.getElementById('f-notes').value,
   };
 
-  if (!settings.apiKey) { showToast('Add your API key in Settings first.', 'error'); return; }
-
   document.getElementById('loading-screen').classList.add('visible');
 
-  const system = `You are an expert construction estimator with 20+ years of experience working for ${settings.companyName}.
-Generate detailed, realistic construction estimates. Respond ONLY with valid JSON, no markdown, no extra text.
-JSON structure:
-{
-  "projectTitle": "string",
-  "summary": "string",
-  "totalLow": number,
-  "totalHigh": number,
-  "duration": "string",
-  "lineItems": [{"category":"string","description":"string","unit":"string","qty":number,"unitCost":number,"total":number}],
-  "materialsList": [{"item":"string","qty":"string","estimatedCost":number}],
-  "laborBreakdown": [{"trade":"string","hours":number,"rate":number,"total":number}],
-  "scopeNotes": ["string"],
-  "exclusions": ["string"],
-  "assumptions": ["string"],
-  "permitRequired": boolean,
-  "permitEstimate": number
-}`;
-
-  const user = `Generate a construction estimate:
-Client: ${form.clientName || 'TBD'}
-Project Type: ${form.projectType}
-Address: ${form.address || 'Not provided'}
-ZIP: ${settings.zip || 'Not provided'}
-Square Footage: ${form.sqft || 'Not provided'}
-Timeline: ${form.timeline || 'Flexible'}
-Labor Rate: $${settings.laborRate}/hr
-Markup: ${settings.markup}%
-Description: ${form.description}
-Notes: ${form.notes || 'None'}
-Apply the ${settings.markup}% markup to all costs. Use realistic current market pricing.`;
-
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(SECURE_ESTIMATE_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': settings.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system,
-        messages: [{ role: 'user', content: user }]
+        form,
+        settings: {
+          companyName: settings.companyName,
+          zip: settings.zip,
+          laborRate: settings.laborRate,
+          markup: settings.markup
+        }
       })
     });
     const data = await res.json();
-    const raw = data.content?.[0]?.text || '{}';
-    const estimate = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    if (!res.ok) {
+      throw new Error(data?.error || `Secure estimator API returned ${res.status}`);
+    }
+    const estimate = data;
     const proj = { id: Date.now(), ...form, estimate, createdAt: new Date().toLocaleDateString(), status: 'Draft' };
     projects.unshift(proj);
     save();
@@ -626,7 +594,6 @@ function setMarkup(v) {
   document.querySelectorAll('.markup-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.v) === v));
 }
 function saveSettings() {
-  settings.apiKey = document.getElementById('s-apikey').value;
   settings.companyName = document.getElementById('s-company').value;
   settings.zip = document.getElementById('s-zip').value;
   settings.laborRate = Number(document.getElementById('s-labor').value);
@@ -636,7 +603,6 @@ function saveSettings() {
 }
 
 // ── Init ──
-document.getElementById('s-apikey').value = settings.apiKey || '';
 document.getElementById('s-company').value = settings.companyName;
 document.getElementById('s-zip').value = settings.zip;
 document.getElementById('s-labor').value = settings.laborRate;
